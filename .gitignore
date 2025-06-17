@@ -1,0 +1,25 @@
+# Android/Java
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+
+# Android Studio
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.dex
+*.class
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Log files
+*.log
