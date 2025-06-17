@@ -32,16 +32,32 @@ This project simulates an infinite audio input stream using a wav file, continuo
 
 ```mermaid
 flowchart LR
-    A[FileReadThread<br>读取WAV文件] -- buffer数据流 --> Q[LinkedBlockingQueue]
-    Q -- buffer数据流 --> B[RecognitionThread<br>推送至Azure识别]
+    subgraph Producer
+        A[FileReadThread<br>读取WAV文件]
+    end
+    subgraph BufferQueue
+        Q[LinkedBlockingQueue]
+    end
+    subgraph Consumer
+        B[RecognitionThread<br>推送至Azure识别]
+    end
+    A -- 生产buffer --> Q
+    Q -- 消费buffer --> B
     B -- API调用 --> C[Azure Speech Service]
-    B -- 获取Token --> T[TokenManager]
+    B -- 获取Token/自动刷新Token --> T[TokenManager]
     T -. 可远端部署 .-> T
+    %% 断点续传：异常/Token过期时，RecognitionThread 将未消费 buffer 重放回队列
+    B -. 断点续传/重放未消费buffer .-> Q
+    %% 生产者-消费者模式
+    classDef prod fill:#e6f7ff,stroke:#1890ff,stroke-width:2px;
+    classDef cons fill:#fffbe6,stroke:#faad14,stroke-width:2px;
+    class A prod;
+    class B cons;
 ```
 
 **说明：**
-- FileReadThread 和 RecognitionThread 分别独立运行，互不阻塞。
-- RecognitionThread 支持 token 过期/异常自动重启，buffer 不丢失。
+- FileReadThread（生产者）不断读取音频并生产 buffer，RecognitionThread（消费者）不断消费 buffer 并推送识别，二者通过队列解耦，典型生产者-消费者模式。
+- RecognitionThread 支持 token 过期自动刷新（与 TokenManager 交互），以及异常/重启时断点续传（重放未消费 buffer），保证识别不中断。
 - TokenManager 推荐远端部署，客户端仅通过 HTTPS 获取 token。
 
 ---
